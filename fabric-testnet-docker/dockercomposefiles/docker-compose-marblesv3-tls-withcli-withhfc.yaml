@@ -1,0 +1,301 @@
+version: '2'
+
+services:
+  ca0:
+    image: blockchain101/fabric-ca:1.0
+    environment:
+      - FABRIC_CA_HOME=/etc/hyperledger/fabric-ca-server
+    ports:
+      - "7054:7054"
+    command: sh -c 'fabric-ca-server start --ca.certfile /etc/hyperledger/fabric-ca-server-config/ca.org1.bctrustmachine.cn-cert.pem --ca.keyfile /etc/hyperledger/fabric-ca-server-config/2eb915a07380812d2444461d98ac693b8d8ae8de79156589e90fbe2aa6d6b539_sk -b admin:adminpw' -d
+    volumes:
+      - ./channel/crypto-config/peerOrganizations/org1.bctrustmachine.cn/ca/:/etc/hyperledger/fabric-ca-server-config
+    container_name: ca0
+
+  ca1:
+    image: blockchain101/fabric-ca:1.0
+    environment:
+      - FABRIC_CA_HOME=/etc/hyperledger/fabric-ca-server
+    ports:
+      - "8054:7054"
+    command: sh -c 'fabric-ca-server start --ca.certfile /etc/hyperledger/fabric-ca-server-config/ca.org2.bctrustmachine.cn-cert.pem --ca.keyfile /etc/hyperledger/fabric-ca-server-config/026a0f1f87106ed5b57c41786344c9d6c36f288953eefbca2a39262191fb066a_sk -b admin:adminpw' -d
+    volumes:
+      - ./channel/crypto-config/peerOrganizations/org2.bctrustmachine.cn/ca/:/etc/hyperledger/fabric-ca-server-config
+    container_name: ca1
+
+  orderer.bctrustmachine.cn:
+    container_name: orderer.bctrustmachine.cn
+    image: blockchain101/fabric-orderer:1.0.1
+    environment:
+      - GRPC_TRACE=all
+      - GRPC_VERBOSITY=debug
+      - ORDERER_GENERAL_LOGLEVEL=INFO
+      - ORDERER_GENERAL_LISTENADDRESS=0.0.0.0
+      - ORDERER_GENERAL_GENESISMETHOD=file
+      - ORDERER_GENERAL_GENESISFILE=/etc/hyperledger/configtx/orderer-TwoOrgs.block
+      - ORDERER_GENERAL_LOCALMSPID=OrdererMSP
+      - ORDERER_GENERAL_LOCALMSPDIR=/etc/hyperledger/msp/orderer
+      - ORDERER_GENERAL_TLS_ENABLED=true
+      - ORDERER_GENERAL_TLS_PRIVATEKEY=/etc/hyperledger/tls/orderer/server.key
+      - ORDERER_GENERAL_TLS_CERTIFICATE=/etc/hyperledger/tls/orderer/server.crt
+      - ORDERER_GENERAL_TLS_ROOTCAS=[/etc/hyperledger/tls/orderer/ca.crt]
+    working_dir: /opt/gopath/src/github.com/hyperledger/fabric/orderer
+    command: orderer
+
+    volumes:
+        - ./channel:/etc/hyperledger/configtx
+        - ./channel/crypto-config/ordererOrganizations/bctrustmachine.cn/orderers/orderer.bctrustmachine.cn/msp/:/etc/hyperledger/msp/orderer
+        - ./channel/crypto-config/ordererOrganizations/bctrustmachine.cn/orderers/orderer.bctrustmachine.cn/tls/:/etc/hyperledger/tls/orderer
+
+    ports:
+      - 7050:7050
+      
+  peer0.org1.bctrustmachine.cn:
+    container_name: peer0.org1.bctrustmachine.cn
+    image: blockchain101/fabric-peer:1.0.1
+    environment:
+      - CORE_LOGGING_LEVEL=INFO
+      - CORE_NEXT=true
+      - CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock
+      - CORE_PEER_ID=peer0.org1.bctrustmachine.cn
+      - CORE_PEER_ENDORSER_ENABLED=true
+      - CORE_PEER_LOCALMSPID=Org1MSP
+      - CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/msp/peer/
+      - CORE_PEER_GOSSIP_ORGLEADER=false
+      - CORE_PEER_GOSSIP_USELEADERELECTION=true     
+      # The following setting skips the gossip handshake since we are
+      # are not doing mutual TLS
+      - CORE_PEER_GOSSIP_SKIPHANDSHAKE=true       
+      - CORE_PEER_ADDRESS=peer0.org1.bctrustmachine.cn:7051
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.org1.bctrustmachine.cn:7051
+      - CORE_PEER_TLS_ENABLED=true
+      - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/tls/peer/server.key
+      - CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/tls/peer/server.crt
+      - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/tls/peer/ca.crt
+      # the following setting starts chaincode containers on the same
+      # bridge network as the peers
+      # https://docs.docker.com/compose/networking/
+      - CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE=dockercomposefiles_default
+    working_dir: /opt/gopath/src/github.com/hyperledger/fabric
+    command: peer node start --peer-defaultchain=false
+    ports:
+      - 7051:7051
+      - 7053:7053
+    volumes:
+        - /var/run/:/host/var/run/
+        - ./channel/crypto-config/peerOrganizations/org1.bctrustmachine.cn/peers/peer0.org1.bctrustmachine.cn/msp/:/etc/hyperledger/msp/peer
+        - ./channel/crypto-config/peerOrganizations/org1.bctrustmachine.cn/peers/peer0.org1.bctrustmachine.cn/tls/:/etc/hyperledger/tls/peer
+    depends_on:
+      - orderer.bctrustmachine.cn
+
+  peer1.org1.bctrustmachine.cn:
+    container_name: peer1.org1.bctrustmachine.cn
+    image: blockchain101/fabric-peer:1.0.1
+    environment:
+      - CORE_NEXT=true
+      - CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock
+      - CORE_PEER_ID=peer1.org1.bctrustmachine.cn
+      - CORE_PEER_ENDORSER_ENABLED=true
+      - CORE_PEER_LOCALMSPID=Org1MSP
+      - CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/msp/peer/
+      - CORE_PEER_GOSSIP_ORGLEADER=false
+      - CORE_PEER_GOSSIP_USELEADERELECTION=true
+      - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.org1.bctrustmachine.cn:7051      
+      # The following setting skips the gossip handshake since we are
+      # are not doing mutual TLS
+      - CORE_PEER_GOSSIP_SKIPHANDSHAKE=true       
+      - CORE_PEER_ADDRESS=peer1.org1.bctrustmachine.cn:7051
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer1.org1.bctrustmachine.cn:7051
+      - CORE_PEER_TLS_ENABLED=true
+      - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/tls/peer/server.key
+      - CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/tls/peer/server.crt
+      - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/tls/peer/ca.crt
+      # the following setting starts chaincode containers on the same
+      # bridge network as the peers
+      # https://docs.docker.com/compose/networking/
+      - CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE=dockercomposefiles_default
+    working_dir: /opt/gopath/src/github.com/hyperledger/fabric
+    command: peer node start --peer-defaultchain=false
+    ports:
+      - 7056:7051
+      - 7058:7053
+    volumes:
+        - /var/run/:/host/var/run/
+        - ./channel/crypto-config/peerOrganizations/org1.bctrustmachine.cn/peers/peer1.org1.bctrustmachine.cn/msp/:/etc/hyperledger/msp/peer
+        - ./channel/crypto-config/peerOrganizations/org1.bctrustmachine.cn/peers/peer1.org1.bctrustmachine.cn/tls/:/etc/hyperledger/tls/peer
+    depends_on:
+      - orderer.bctrustmachine.cn
+      - peer0.org1.bctrustmachine.cn
+
+  peer0.org2.bctrustmachine.cn:
+    container_name: peer0.org2.bctrustmachine.cn
+    image: blockchain101/fabric-peer:1.0.1
+    environment:
+      - CORE_NEXT=true
+      - CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock
+      - CORE_PEER_ID=peer0.org2.bctrustmachine.cn
+      - CORE_PEER_ENDORSER_ENABLED=true
+      - CORE_PEER_LOCALMSPID=Org2MSP
+      - CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/msp/peer/
+      - CORE_PEER_GOSSIP_ORGLEADER=false
+      - CORE_PEER_GOSSIP_USELEADERELECTION=true      
+      # The following setting skips the gossip handshake since we are
+      # are not doing mutual TLS
+      - CORE_PEER_GOSSIP_SKIPHANDSHAKE=true            
+      - CORE_PEER_ADDRESS=peer0.org2.bctrustmachine.cn:7051
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.org2.bctrustmachine.cn:7051
+
+      - CORE_PEER_TLS_ENABLED=true
+      - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/tls/peer/server.key
+      - CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/tls/peer/server.crt
+      - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/tls/peer/ca.crt
+      
+      # the following setting starts chaincode containers on the same
+      # bridge network as the peers
+      # https://docs.docker.com/compose/networking/
+      - CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE=dockercomposefiles_default
+    working_dir: /opt/gopath/src/github.com/hyperledger/fabric
+    command: peer node start --peer-defaultchain=false
+    ports:
+      - 8051:7051
+      - 8053:7053
+    volumes:
+        - /var/run/:/host/var/run/
+        - ./channel/crypto-config/peerOrganizations/org2.bctrustmachine.cn/peers/peer0.org2.bctrustmachine.cn/msp/:/etc/hyperledger/msp/peer
+        - ./channel/crypto-config/peerOrganizations/org2.bctrustmachine.cn/peers/peer0.org2.bctrustmachine.cn/tls/:/etc/hyperledger/tls/peer
+    depends_on:
+      - orderer.bctrustmachine.cn
+
+  peer1.org2.bctrustmachine.cn:
+    container_name: peer1.org2.bctrustmachine.cn
+    image: blockchain101/fabric-peer:1.0.1
+    environment:
+      - CORE_NEXT=true
+      - CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock
+      - CORE_PEER_ID=peer1.org2.bctrustmachine.cn
+      - CORE_PEER_ENDORSER_ENABLED=true
+      - CORE_PEER_LOCALMSPID=Org2MSP
+      - CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/msp/peer/
+      - CORE_PEER_GOSSIP_ORGLEADER=false
+      - CORE_PEER_GOSSIP_USELEADERELECTION=true
+      - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.org2.bctrustmachine.cn:7051      
+      # The following setting skips the gossip handshake since we are
+      # are not doing mutual TLS
+      - CORE_PEER_GOSSIP_SKIPHANDSHAKE=true      
+      - CORE_PEER_ADDRESS=peer1.org2.bctrustmachine.cn:7051
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer1.org2.bctrustmachine.cn:7051
+      - CORE_PEER_TLS_ENABLED=true
+      - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/tls/peer/server.key
+      - CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/tls/peer/server.crt
+      - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/tls/peer/ca.crt
+      # the following setting starts chaincode containers on the same
+      # bridge network as the peers
+      # https://docs.docker.com/compose/networking/
+      - CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE=dockercomposefiles_default
+    working_dir: /opt/gopath/src/github.com/hyperledger/fabric
+    command: peer node start --peer-defaultchain=false
+    ports:
+      - 8056:7051
+      - 8058:7053
+    volumes:
+        - /var/run/:/host/var/run/
+        - ./channel/crypto-config/peerOrganizations/org2.bctrustmachine.cn/peers/peer1.org2.bctrustmachine.cn/msp/:/etc/hyperledger/msp/peer
+        - ./channel/crypto-config/peerOrganizations/org2.bctrustmachine.cn/peers/peer1.org2.bctrustmachine.cn/tls/:/etc/hyperledger/tls/peer
+    depends_on:
+      - orderer.bctrustmachine.cn
+      - peer0.org2.bctrustmachine.cn
+
+  #couchdb:
+   # container_name: couchdb
+   # image: hyperledger/fabric-couchdb
+   # ports:
+   #   - 5984:5984
+   # environment:
+   #   COUCHDB_USER: admin
+   #   COUCHDB_PASSWORD: password
+   #   DB_URL: http://localhost:5984/member_db
+
+  cli:
+    container_name: cli
+    image: blockchain101/fabric-cli:1.0.1
+    tty: true
+    environment:
+      - GOPATH=/opt/gopath
+      - CORE_PEER_ADDRESSAUTODETECT=true
+      - CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock
+      - CORE_LOGGING_LEVEL=INFO
+      - CORE_NEXT=true
+      - CORE_PEER_ID=cli
+      - CORE_PEER_ENDORSER_ENABLED=true
+      # - CORE_PEER_COMMITTER_LEDGER_ORDERER=orderer.bctrustmachine.cn:7050
+      - CORE_PEER_ADDRESS=peer0.org1.bctrustmachine.cn:7051
+      - CORE_PEER_GOSSIP_IGNORESECURITY=true
+      - CORE_PEER_LOCALMSPID=Org1MSP
+      - CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/msp/peer/
+      - CORE_PEER_TLS_ENABLED=true
+      - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/tls/peer/server.key
+      - CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/tls/peer/server.crt
+      - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/tls/peer/ca.crt
+      # - CORE_PEER_TLS_SERVERHOSTOVERRIDE=peer0.org1.bctrustmachine.cn
+      - PRODUCTION_PATH=/var/hyperledger/production
+    
+    working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
+    command: /bin/bash -c './scripts/script-${CHANNEL_NAME}.sh ${CHANNEL_NAME}; sleep 1000000'
+    #command: /bin/bash
+    volumes:
+        - /var/run/:/host/var/run/
+        - ./channel/crypto-config:/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/
+        - ./scripts:/opt/gopath/src/github.com/hyperledger/fabric/peer/scripts/
+        - ./channel:/opt/gopath/src/github.com/hyperledger/fabric/peer/channel
+        - ./channel/crypto-config/peerOrganizations/org1.bctrustmachine.cn/peers/peer0.org1.bctrustmachine.cn/msp/:/etc/hyperledger/msp/peer
+        - ./channel/crypto-config/peerOrganizations/org1.bctrustmachine.cn/peers/peer0.org1.bctrustmachine.cn/tls/:/etc/hyperledger/tls/peer
+    depends_on:
+      - orderer.bctrustmachine.cn
+      - peer0.org1.bctrustmachine.cn
+      - peer1.org1.bctrustmachine.cn
+      - peer0.org2.bctrustmachine.cn
+      - peer1.org2.bctrustmachine.cn
+
+  hfc0:
+    container_name: hfc0
+    image: blockchain101/fabric-hfc:1.0.1
+    tty: true
+    environment:
+      - GOPATH=/opt/gopath
+      - CORE_PEER_ADDRESSAUTODETECT=true
+      - CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock
+      - TNVM_DIR=/usr/local/lib/node/.tnvm
+    command: /bin/bash -c '. $$TNVM_DIR/tnvm.sh; $$TNVM_DIR/bin/gulp marbles1;'
+    #command: /bin/bash 
+    volumes:
+        - /var/run/:/host/var/run/
+        - ./config:/dapps/marbles-3.5.3/config
+    ports:
+      - 3001:3001      
+      - 9999:9999     
+    depends_on:
+      - ca0
+      - orderer.bctrustmachine.cn
+      - peer0.org1.bctrustmachine.cn
+      
+  hfc1:
+    container_name: hfc1
+    image: blockchain101/fabric-hfc:1.0.1
+    tty: true
+    environment:
+      - GOPATH=/opt/gopath
+      - CORE_PEER_ADDRESSAUTODETECT=true
+      - CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock
+      - TNVM_DIR=/usr/local/lib/node/.tnvm      
+    command: /bin/bash -c '. $$TNVM_DIR/tnvm.sh; $$TNVM_DIR/bin/gulp marbles2;'
+    #command: /bin/bash
+    volumes:
+        - /var/run/:/host/var/run/
+        - ./config:/dapps/marbles-3.5.3/config    
+    ports:
+      - 3002:3002    
+      - 9998:9999   
+    depends_on:
+      - ca1    
+      - orderer.bctrustmachine.cn
+      - peer0.org2.bctrustmachine.cn

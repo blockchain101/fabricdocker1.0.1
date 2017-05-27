@@ -1,0 +1,50 @@
+{
+    "credentials": {
+        "network_id": "marble_network",
+        "orderers": [
+            {
+                "discovery": "grpcs://orderer.bctrustmachine.cn:7050",
+                "msp_id": "OrdererMSP",
+                "tls_certificate": "ca_cert_orderer"
+            }
+        ],
+        "cas": [
+            {
+                "api": "http://ca0:7054",
+                "msp_id": "Org1MSP",
+                "users": [
+                    {
+                        "enrollId": "admin",
+                        "enrollSecret": "adminpw"
+                    }
+                ],
+                "tls_certificate": "ca_cert_org1"
+            }
+        ],
+        "peers": [
+            {
+                "name": "fabric-peer-1a",
+                "discovery": "grpcs://peer0.org1.bctrustmachine.cn:7051",
+                "events": "grpcs://peer0.org1.bctrustmachine.cn:7053",
+                "msp_id": "Org1MSP",
+                "tls_certificate": "ca_cert_org1"
+            }
+        ],
+        "app": {
+            "channel_id": "ch1",
+            "chaincode_id": "marbles02",
+            "chaincode_version": "1.0",
+            "block_delay": 1000
+        },
+        "tls_certificates": {
+            "ca_cert_org1": {
+                "common_name": null,
+                "pem": "-----BEGIN CERTIFICATE-----\r\nMIICZTCCAgygAwIBAgIRAKTzLHAuBuanlU0OjC1MF9EwCgYIKoZIzj0EAwIwfzEL\r\nMAkGA1UEBhMCVVMxEzARBgNVBAgTCkNhbGlmb3JuaWExFjAUBgNVBAcTDVNhbiBG\r\ncmFuY2lzY28xHzAdBgNVBAoTFm9yZzEuYmN0cnVzdG1hY2hpbmUuY24xIjAgBgNV\r\nBAMTGWNhLm9yZzEuYmN0cnVzdG1hY2hpbmUuY24wHhcNMTcwNTI3MDEzMTMwWhcN\r\nMjcwNTI1MDEzMTMwWjB/MQswCQYDVQQGEwJVUzETMBEGA1UECBMKQ2FsaWZvcm5p\r\nYTEWMBQGA1UEBxMNU2FuIEZyYW5jaXNjbzEfMB0GA1UEChMWb3JnMS5iY3RydXN0\r\nbWFjaGluZS5jbjEiMCAGA1UEAxMZY2Eub3JnMS5iY3RydXN0bWFjaGluZS5jbjBZ\r\nMBMGByqGSM49AgEGCCqGSM49AwEHA0IABLFXnKiyKInjaAGiFrjQu536uf4WVvlF\r\nU/R4pCAzRiElw3ri6JpDNjftZDihg/am2GVTmojimeI+XkIGtPZZ0GajaTBnMA4G\r\nA1UdDwEB/wQEAwIBpjAZBgNVHSUEEjAQBgRVHSUABggrBgEFBQcDATAPBgNVHRMB\r\nAf8EBTADAQH/MCkGA1UdDgQiBCAuuRWgc4CBLSRERh2YrGk7jYro3nkVZYnpD74q\r\npta1OTAKBggqhkjOPQQDAgNHADBEAiAYNupDZv8iBaVOcQE4MiYpmIkEg/t+CB5Y\r\nGVB+MKI1twIgYgGB03b4mV8emgcduC7dHAY9TgNo/zq6K0ruQRINhCQ=\r\n-----END CERTIFICATE-----\r\n"
+            },
+            "ca_cert_orderer": {
+                "common_name": null,
+                "pem": "-----BEGIN CERTIFICATE-----\r\nMIICUTCCAfigAwIBAgIRAL94KQFirFQrlDdRQ4XJBxkwCgYIKoZIzj0EAwIwdTEL\r\nMAkGA1UEBhMCVVMxEzARBgNVBAgTCkNhbGlmb3JuaWExFjAUBgNVBAcTDVNhbiBG\r\ncmFuY2lzY28xGjAYBgNVBAoTEWJjdHJ1c3RtYWNoaW5lLmNuMR0wGwYDVQQDExRj\r\nYS5iY3RydXN0bWFjaGluZS5jbjAeFw0xNzA1MjcwMTMxMzFaFw0yNzA1MjUwMTMx\r\nMzFaMHUxCzAJBgNVBAYTAlVTMRMwEQYDVQQIEwpDYWxpZm9ybmlhMRYwFAYDVQQH\r\nEw1TYW4gRnJhbmNpc2NvMRowGAYDVQQKExFiY3RydXN0bWFjaGluZS5jbjEdMBsG\r\nA1UEAxMUY2EuYmN0cnVzdG1hY2hpbmUuY24wWTATBgcqhkjOPQIBBggqhkjOPQMB\r\nBwNCAASa1V06hOGr/15S/mjUw0xezwsvsurfv083W5/5MLcYpD/ncKfOvcn8bYCv\r\nIfN+/6dG2ilXI1wB1ik+vxjNsYaMo2kwZzAOBgNVHQ8BAf8EBAMCAaYwGQYDVR0l\r\nBBIwEAYEVR0lAAYIKwYBBQUHAwEwDwYDVR0TAQH/BAUwAwEB/zApBgNVHQ4EIgQg\r\nBK3HwzPq7lKBwNfOkgLKwNpAhcC5SC9tjd59ZD5YqvcwCgYIKoZIzj0EAwIDRwAw\r\nRAIgB+UmggO5SfSXsgXYudm1R0iUPYNlqVJ8inlFuED+3s4CIA77Vk0/M3RguTlz\r\nmVsl5r2uUx7JXM3TCmLd/htvqSk5\r\n-----END CERTIFICATE-----\r\n"
+            }
+        }
+    }
+}
